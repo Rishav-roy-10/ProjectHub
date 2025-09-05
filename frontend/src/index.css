@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+/* Markdown Styles for Chat */
+.markdown-content {
+  line-height: 1.6;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  margin: 0.5em 0 0.25em 0;
+  font-weight: 600;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+.markdown-content h1 { font-size: 1.5em; }
+.markdown-content h2 { font-size: 1.3em; }
+.markdown-content h3 { font-size: 1.1em; }
+
+.markdown-content p {
+  margin: 0.5em 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+  max-width: 100%;
+}
+
+.markdown-content li {
+  margin: 0.25em 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+.markdown-content blockquote {
+  border-left: 3px solid #10b981;
+  margin: 0.5em 0;
+  padding-left: 1em;
+  color: #9ca3af;
+  font-style: italic;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+.markdown-content code {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  padding: 0.125em 0.25em;
+  border-radius: 0.25em;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.markdown-content pre {
+  background-color: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 0.5em;
+  padding: 1em;
+  margin: 0.5em 0;
+  overflow-x: auto;
+  max-width: 100%;
+  word-wrap: break-word;
+}
+
+.markdown-content pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+.markdown-content strong {
+  font-weight: 600;
+  color: #f3f4f6;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+.markdown-content em {
+  font-style: italic;
+  color: #d1d5db;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+/* Dark theme adjustments for chat messages */
+.bg-emerald-500 .markdown-content code {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.bg-emerald-500 .markdown-content pre {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.bg-emerald-500 .markdown-content blockquote {
+  border-left-color: #ffffff;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Strict height constraints for chat containers */
+.chat-messages-container {
+  max-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.chat-message-content {
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+}
