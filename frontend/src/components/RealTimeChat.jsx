@@ -33,9 +33,14 @@ const RealTimeChat = ({ projectId, projectName, onOpenProjects, onAIFilesCreated
   if (!projectId) return;
 
   // Use environment variable in production, fallback to localhost in dev
-  const newSocket = io(import.meta.env.VITE_API_URL || "http://localhost:3000", {
+ const newSocket = io(
+  import.meta.env.VITE_API_URL || "https://projecthub-evy1.onrender.com",
+  {
+    transports: ["websocket", "polling"], // important for Render / proxies
     withCredentials: true,
-  });
+  }
+);
+
 
   setSocket(newSocket);
   newSocket.emit("join-project", projectId);
