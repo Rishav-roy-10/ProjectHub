@@ -78,7 +78,7 @@ const RealTimeChat = ({ projectId, projectName, onOpenProjects, onAIFilesCreated
     newSocket.emit('leave-project', projectId);
     newSocket.disconnect();
   };
-}, [projectId]);
+}, [projectId, onAIFilesCreated]);
 
   const loadExistingMessages = async () => {
     try {
