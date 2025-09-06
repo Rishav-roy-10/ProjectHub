@@ -58,34 +58,27 @@ const RealTimeChat = ({ projectId, projectName, onOpenProjects, onAIFilesCreated
     }
   });
 
+  newSocket.on('message-deleted', (data) => {
+    if (data.projectId === projectId && data.deleteForEveryone) {
+      setMessages(prev => prev.filter(msg => msg._id !== data.messageId));
+    }
+  });
+
+  newSocket.on('connect', () => {
+    setIsConnected(true);
+  });
+
+  newSocket.on('disconnect', () => {
+    setIsConnected(false);
+  });
+
+  loadExistingMessages();
+
   return () => {
+    newSocket.emit('leave-project', projectId);
     newSocket.disconnect();
   };
 }, [projectId]);
-
-
-
-    newSocket.on('message-deleted', (data) => {
-      if (data.projectId === projectId && data.deleteForEveryone) {
-        setMessages(prev => prev.filter(msg => msg._id !== data.messageId));
-      }
-    });
-
-    newSocket.on('connect', () => {
-      setIsConnected(true);
-    });
-
-    newSocket.on('disconnect', () => {
-      setIsConnected(false);
-    });
-
-    loadExistingMessages();
-
-    return () => {
-      newSocket.emit('leave-project', projectId);
-      newSocket.close();
-    };
-  }, [projectId]);
 
   const loadExistingMessages = async () => {
     try {
