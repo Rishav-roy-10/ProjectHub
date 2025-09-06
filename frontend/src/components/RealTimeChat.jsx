@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { io } from 'socket.io-client';
+import { io } from "socket.io-client";
 import { UserContext } from '../context/user.context';
 import axios from '../config/axios';
 import ReactMarkdown from 'react-markdown';
@@ -29,30 +29,39 @@ const RealTimeChat = ({ projectId, projectName, onOpenProjects, onAIFilesCreated
     scrollToBottom();
   }, [messages]);
 
-  useEffect(() => {
-    if (!projectId) return;
+ useEffect(() => {
+  if (!projectId) return;
 
-    const newSocket = io('http://localhost:3000');
-    setSocket(newSocket);
-    newSocket.emit('join-project', projectId);
+  // Use environment variable in production, fallback to localhost in dev
+  const newSocket = io(import.meta.env.VITE_API_URL || "http://localhost:3000", {
+    withCredentials: true,
+  });
 
-    newSocket.on('new-message', (messageData) => {
-      if (messageData.projectId === projectId) {
-        setMessages(prev => [...prev, messageData]);
-        if (messageData.sender === 'ai') {
-          setAiTyping(false);
-          
-          // Check if AI response contains file creation
-          if (messageData.content && messageData.content.includes('**Files Created:**')) {
-            const fileMatches = messageData.content.match(/- (.+)/g);
-            if (fileMatches && onAIFilesCreated) {
-              const files = fileMatches.map(match => match.replace('- ', ''));
-              onAIFilesCreated(files);
-            }
+  setSocket(newSocket);
+  newSocket.emit("join-project", projectId);
+
+  newSocket.on("new-message", (messageData) => {
+    if (messageData.projectId === projectId) {
+      setMessages((prev) => [...prev, messageData]);
+      if (messageData.sender === "ai") {
+        setAiTyping(false);
+
+        // Check if AI response contains file creation
+        if (messageData.content && messageData.content.includes("**Files Created:**")) {
+          const fileMatches = messageData.content.match(/- (.+)/g);
+          if (fileMatches && onAIFilesCreated) {
+            const files = fileMatches.map((match) => match.replace("- ", ""));
+            onAIFilesCreated(files);
           }
         }
       }
-    });
+    }
+  });
+
+  return () => {
+    newSocket.disconnect();
+  };
+}, [projectId]);
 
 
 
