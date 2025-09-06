@@ -4,9 +4,19 @@ import http from 'http';
 import { Server } from 'socket.io';
 import app from './app.js';
 import './workers/code.worker.js';
-import { generateResult, updateChatHistory, getChatHistory, createFilesFromAIResponse } from './services/ai.service.js';
+import {
+  generateResult,
+  updateChatHistory,
+  getChatHistory,
+  createFilesFromAIResponse
+} from './services/ai.service.js';
 
-
+// 👇 Add COOP & COEP headers to enable cross-origin isolation (for SharedArrayBuffer)
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  next();
+});
 
 const port = process.env.PORT || 3000;
 
@@ -15,7 +25,12 @@ const server = http.createServer(app);
 // Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://192.168.0.6:5175", "https://project-hub-one-sage.vercel.app"
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:5175",
+      "http://192.168.0.6:5175",
+      "https://project-hub-one-sage.vercel.app"
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
