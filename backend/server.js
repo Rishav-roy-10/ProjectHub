@@ -1,9 +1,13 @@
+// server.js
 import dotenv from 'dotenv';
 dotenv.config();
+
 import http from 'http';
+import express from 'express';
 import { Server } from 'socket.io';
 import app from './app.js';
 import './workers/code.worker.js';
+
 import {
   generateResult,
   updateChatHistory,
@@ -11,7 +15,7 @@ import {
   createFilesFromAIResponse
 } from './services/ai.service.js';
 
-// 👇 Add COOP & COEP headers to enable cross-origin isolation (for SharedArrayBuffer)
+// Enable cross-origin isolation (for SharedArrayBuffer, if needed)
 app.use((req, res, next) => {
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
@@ -19,10 +23,11 @@ app.use((req, res, next) => {
 });
 
 const port = process.env.PORT || 3000;
+const host = '0.0.0.0';
 
 const server = http.createServer(app);
 
-// Initialize Socket.io
+// ---- Socket.IO setup ----
 const io = new Server(server, {
   cors: {
     origin: [
@@ -38,6 +43,7 @@ const io = new Server(server, {
   }
 });
 
+// ---- Socket events ----
 io.on('connection', (socket) => {
   socket.on('join-project', (projectId) => {
     socket.join(`project-${projectId}`);
@@ -47,109 +53,67 @@ io.on('connection', (socket) => {
     socket.leave(`project-${projectId}`);
   });
 
-  // Handle chat messages
+  // Handle user chat messages (no AI logic here anymore)
   socket.on('send-message', async (data) => {
     const { projectId, content, sender, senderName } = data;
 
-    // Update chat history with user message
-    updateChatHistory(projectId, {
-      content,
-      sender,
-      senderName,
-      timestamp: new Date()
-    });
+    updateChatHistory(projectId, { content, sender, senderName, timestamp: new Date() });
 
-    // Broadcast message to all users in the project room
     io.to(`project-${projectId}`).emit('new-message', {
-      projectId,
-      content,
-      sender,
-      senderName,
-      timestamp: new Date()
+      projectId, content, sender, senderName, timestamp: new Date()
     });
-
-    const aiIsPresentInMessage = content.includes('@ai');
-    if (aiIsPresentInMessage) {
-      try {
-        // Extract the actual question/request after @ai
-        const aiRequest = content.replace(/@ai\s*/i, '').trim();
-
-        let aiResponse = 'Hello! I\'m your AI assistant. How can I help you today?';
-
-        if (aiRequest) {
-          // Use your Gemini AI service for real AI responses
-          if (process.env.GEMINI_API_KEY) {
-            try {
-              // All AI requests stay in the current project
-              let chatPrompt;
-              if (aiRequest) {
-                chatPrompt = `Request: "${aiRequest}". Provide a detailed response with code examples and file structure. Create a complete implementation with proper folder organization.`;
-              }
-
-              aiResponse = await generateResult(chatPrompt, projectId, []);
-
-              // Check if AI response contains file creation requests
-              const createdFiles = await createFilesFromAIResponse(projectId, aiResponse);
-              if (createdFiles.length > 0) {
-                aiResponse += `\n\n**Files Created:**\n${createdFiles.map(file => `- ${file.filePath}`).join('\n')}`;
-              }
-            } catch (aiError) {
-              aiResponse = 'Sorry, I encountered an error while processing your request. Please try again.';
-            }
-          } else {
-            aiResponse = 'AI service is not configured. Please set your GEMINI_API_KEY in environment variables.';
-          }
-        }
-
-        // Update chat history with AI response
-        updateChatHistory(projectId, {
-          content: aiResponse,
-          sender: 'ai',
-          senderName: 'AI Assistant',
-          timestamp: new Date()
-        });
-
-        // Broadcast AI response to all users in the project room
-        io.to(`project-${projectId}`).emit('new-message', {
-          projectId: projectId,
-          content: aiResponse,
-          sender: 'ai',
-          senderName: 'AI Assistant',
-          timestamp: new Date()
-        });
-
-      } catch (error) {
-        io.to(`project-${projectId}`).emit('new-message', {
-          projectId,
-          content: 'Sorry, I encountered an error. Please try again.',
-          sender: 'ai',
-          senderName: 'AI Assistant',
-          timestamp: new Date()
-        });
-      }
-      return;
-    }
   });
 
-  // Handle message deletion
-  socket.on('delete-message', async (data) => {
+  socket.on('delete-message', (data) => {
     const { projectId, messageId, deleteForEveryone } = data;
-
-    // Broadcast delete event to all users in the project room
-    io.to(`project-${projectId}`).emit('message-deleted', {
-      projectId,
-      messageId,
-      deleteForEveryone
-    });
-
-  });
-
-  socket.on('disconnect', () => {
-    // User disconnected
+    io.to(`project-${projectId}`).emit('message-deleted', { projectId, messageId, deleteForEveryone });
   });
 });
 
-const host = '0.0.0.0';
+// ---- HTTP AI route ----
+app.post('/api/ask-ai', express.json(), async (req, res) => {
+  try {
+    const { projectId, prompt } = req.body;
+    if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
+
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: 'AI service is not configured (GEMINI_API_KEY missing).' });
+    }
+
+    const chatPrompt = `Request: "${prompt}". Provide a detailed response with code examples and file structure. Create a complete implementation with proper folder organization.`;
+
+    let aiResponse = await generateResult(chatPrompt, projectId, []);
+
+    const createdFiles = await createFilesFromAIResponse(projectId, aiResponse);
+    if (createdFiles.length > 0) {
+      aiResponse += `\n\n**Files Created:**\n${createdFiles.map(f => `- ${f.filePath}`).join('\n')}`;
+    }
+
+    // Save in chat history
+    updateChatHistory(projectId, {
+      content: aiResponse,
+      sender: 'ai',
+      senderName: 'AI Assistant',
+      timestamp: new Date()
+    });
+
+    // Broadcast to project room via socket
+    io.to(`project-${projectId}`).emit('new-message', {
+      projectId,
+      content: aiResponse,
+      sender: 'ai',
+      senderName: 'AI Assistant',
+      timestamp: new Date()
+    });
+
+    res.json({ success: true, message: aiResponse });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'AI request failed.' });
+  }
+});
+
+// ---- Start server ----
 server.listen(port, host, () => {
   console.log(`Server running at http://${host}:${port}`);
 });
