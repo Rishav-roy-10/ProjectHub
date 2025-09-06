@@ -15,7 +15,8 @@ const server = http.createServer(app);
 // Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://192.168.0.6:5175"],
+    origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://192.168.0.6:5175", "https://project-hub-one-sage.vercel.app"
+    ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
@@ -34,7 +35,7 @@ io.on('connection', (socket) => {
   // Handle chat messages
   socket.on('send-message', async (data) => {
     const { projectId, content, sender, senderName } = data;
-    
+
     // Update chat history with user message
     updateChatHistory(projectId, {
       content,
@@ -51,15 +52,15 @@ io.on('connection', (socket) => {
       senderName,
       timestamp: new Date()
     });
-    
+
     const aiIsPresentInMessage = content.includes('@ai');
-    if(aiIsPresentInMessage){
+    if (aiIsPresentInMessage) {
       try {
         // Extract the actual question/request after @ai
         const aiRequest = content.replace(/@ai\s*/i, '').trim();
-        
+
         let aiResponse = 'Hello! I\'m your AI assistant. How can I help you today?';
-        
+
         if (aiRequest) {
           // Use your Gemini AI service for real AI responses
           if (process.env.GEMINI_API_KEY) {
@@ -69,9 +70,9 @@ io.on('connection', (socket) => {
               if (aiRequest) {
                 chatPrompt = `Request: "${aiRequest}". Provide a detailed response with code examples and file structure. Create a complete implementation with proper folder organization.`;
               }
-              
+
               aiResponse = await generateResult(chatPrompt, projectId, []);
-              
+
               // Check if AI response contains file creation requests
               const createdFiles = await createFilesFromAIResponse(projectId, aiResponse);
               if (createdFiles.length > 0) {
@@ -84,7 +85,7 @@ io.on('connection', (socket) => {
             aiResponse = 'AI service is not configured. Please set your GEMINI_API_KEY in environment variables.';
           }
         }
-        
+
         // Update chat history with AI response
         updateChatHistory(projectId, {
           content: aiResponse,
@@ -101,7 +102,7 @@ io.on('connection', (socket) => {
           senderName: 'AI Assistant',
           timestamp: new Date()
         });
-        
+
       } catch (error) {
         io.to(`project-${projectId}`).emit('new-message', {
           projectId,
@@ -118,21 +119,21 @@ io.on('connection', (socket) => {
   // Handle message deletion
   socket.on('delete-message', async (data) => {
     const { projectId, messageId, deleteForEveryone } = data;
-    
-          // Broadcast delete event to all users in the project room
-      io.to(`project-${projectId}`).emit('message-deleted', {
-        projectId,
-        messageId,
-        deleteForEveryone
-      });
-      
+
+    // Broadcast delete event to all users in the project room
+    io.to(`project-${projectId}`).emit('message-deleted', {
+      projectId,
+      messageId,
+      deleteForEveryone
     });
 
-    socket.on('disconnect', () => {
-      // User disconnected
-    });
   });
 
-  server.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+  socket.on('disconnect', () => {
+    // User disconnected
   });
+});
+
+server.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
